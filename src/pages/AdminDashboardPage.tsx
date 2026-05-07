@@ -599,6 +599,13 @@ export function AdminDashboardPage() {
     await loadAll()
   }
 
+  function handleResetElectionForm() {
+    setElectionTitle('')
+    setElectionStatus('draft')
+    setStartsAt('')
+    setEndsAt('')
+  }
+
   async function handleElectionLogoFile(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
     event.target.value = ''
@@ -1453,7 +1460,7 @@ export function AdminDashboardPage() {
             </div>
             <form className="grid gap-3 sm:grid-cols-2" onSubmit={handleSaveElection}>
               <input
-                className="input-app sm:col-span-2"
+                className="input-app"
                 placeholder="Election title"
                 value={electionTitle}
                 onChange={(event) => setElectionTitle(event.target.value)}
@@ -1477,15 +1484,24 @@ export function AdminDashboardPage() {
               />
               <input
                 type="datetime-local"
-                className="input-app sm:col-span-2"
+                className="input-app"
                 value={endsAt}
                 onChange={(event) => setEndsAt(event.target.value)}
                 required
                 aria-label="End Date"
               />
-              <button className="btn-primary-sm sm:col-span-2 w-auto justify-self-start bg-mint-700 px-3 py-1.5 text-xs hover:bg-mint-800">
-                {election && election.status !== 'closed' ? 'Update Election' : 'Create Election'}
-              </button>
+              <div className="sm:col-span-2 flex flex-wrap items-center gap-2">
+                <button className="btn-primary-sm w-auto justify-self-start bg-mint-700 px-3 py-1.5 text-xs hover:bg-mint-800">
+                  {election && election.status !== 'closed' ? 'Update Election' : 'Create Election'}
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary px-3 py-1.5 text-xs"
+                  onClick={handleResetElectionForm}
+                >
+                  Reset form
+                </button>
+              </div>
             </form>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1">
@@ -1622,7 +1638,7 @@ export function AdminDashboardPage() {
                   disabled={!election}
                 />
                 <button
-                  className="btn-primary-sm sm:col-span-3 disabled:opacity-60"
+                  className="btn-primary-sm sm:col-span-3 w-auto justify-self-start bg-mint-700 px-3 py-1.5 text-xs hover:bg-mint-800 disabled:opacity-60"
                   disabled={!election}
                 >
                   Add Position
