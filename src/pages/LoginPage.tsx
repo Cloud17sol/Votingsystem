@@ -75,6 +75,7 @@ export function LoginPage() {
   })
   const [email, setEmail] = useState(() => loadLoginFlowFromStorage()?.email ?? '')
   const [loginPassword, setLoginPassword] = useState('')
+  const [showLoginPassword, setShowLoginPassword] = useState(false)
   const [recoverPassword, setRecoverPassword] = useState('')
   const [recoverConfirmPassword, setRecoverConfirmPassword] = useState('')
   const [otp, setOtp] = useState('')
@@ -438,6 +439,7 @@ export function LoginPage() {
     setStep('email')
     setOtp('')
     setLoginPassword('')
+    setShowLoginPassword(false)
     setRecoverPassword('')
     setRecoverConfirmPassword('')
     setError('')
@@ -662,16 +664,62 @@ export function LoginPage() {
                     >
                       Password
                     </label>
-                    <input
-                      id="login-password"
-                      type="password"
-                      autoComplete="current-password"
-                      required
-                      value={loginPassword}
-                      onChange={(e) => setLoginPassword(e.target.value)}
-                      className="input-app"
-                      disabled={loading}
-                    />
+                    <div className="relative">
+                      <input
+                        id="login-password"
+                        type={showLoginPassword ? 'text' : 'password'}
+                        autoComplete="current-password"
+                        required
+                        value={loginPassword}
+                        onChange={(e) => setLoginPassword(e.target.value)}
+                        className="input-app pr-11"
+                        disabled={loading}
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1 text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-800 disabled:opacity-50"
+                        onClick={() => setShowLoginPassword((visible) => !visible)}
+                        disabled={loading}
+                        aria-label={showLoginPassword ? 'Hide password' : 'Show password'}
+                        aria-pressed={showLoginPassword}
+                      >
+                        {showLoginPassword ? (
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="20"
+                            height="20"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden
+                          >
+                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+                            <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+                            <path d="M1 1l22 22" />
+                            <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24" />
+                          </svg>
+                        ) : (
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="20"
+                            height="20"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden
+                          >
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                            <circle cx="12" cy="12" r="3" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
                   </div>
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <button
