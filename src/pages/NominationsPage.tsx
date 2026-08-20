@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { AppCreditFooter } from '../components/AppCreditFooter'
 import { AppTopbar } from '../components/AppTopbar'
+import { GridBackground } from '../components/GridBackground'
 import { supabase } from '../lib/supabase'
 
 type NominationPosition = {
@@ -151,15 +152,17 @@ export function NominationsPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-page">
-      <AppTopbar />
-      <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-4 py-8">
-        <div className="mb-6 flex flex-wrap gap-2 border-b border-zinc-200 pb-4">
-          <Link to="/login" className="nav-tab nav-tab-inactive no-underline">
-            Sign in
-          </Link>
-          <span className="nav-tab nav-tab-active">Nominations</span>
-        </div>
+    <div className="relative flex min-h-screen flex-col bg-page">
+      <GridBackground />
+      <div className="relative z-10 flex min-h-screen flex-col">
+        <AppTopbar />
+        <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-4 py-8">
+          <div className="mb-6 flex flex-wrap gap-2 border-b border-zinc-200 pb-4">
+            <Link to="/login" className="nav-tab nav-tab-inactive no-underline">
+              Sign in
+            </Link>
+            <span className="nav-tab nav-tab-active">Nominations</span>
+          </div>
 
         <div className="card-app space-y-5 p-8">
           <div className="space-y-1">
@@ -293,6 +296,7 @@ export function NominationsPage() {
         </div>
 
         <AppCreditFooter className="mt-8" />
+      </div>
       </div>
     </div>
   )
