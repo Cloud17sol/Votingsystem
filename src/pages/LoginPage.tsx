@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { AppCreditFooter } from '../components/AppCreditFooter'
 import { AppTopbar } from '../components/AppTopbar'
+import { GridBackground } from '../components/GridBackground'
 import { PublicNotificationsPanel } from '../components/PublicNotificationsPanel'
 import { RedactedEmailDisplay, type MaskedEmailParts } from '../components/RedactedEmailDisplay'
 import { completeAuthenticatedMemberRouting } from '../lib/completeAuthenticatedMemberRouting'
@@ -447,29 +448,31 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-page">
-      <AppTopbar />
-      <div className="flex flex-1 flex-col items-center justify-center gap-4 px-4 py-10">
-        <PublicNotificationsPanel />
-        <div className="card-app w-full max-w-md space-y-5 p-8">
-          <div className="flex flex-wrap gap-2 border-b border-zinc-200 pb-4">
-            <span className="nav-tab nav-tab-active">Sign in</span>
-            <Link to="/nominations" className="nav-tab nav-tab-inactive no-underline">
-              Nominations
-            </Link>
-          </div>
-          <div className="space-y-1">
-            <h2 className="text-xl font-bold tracking-tight text-zinc-900">Welcome back</h2>
-            <p className="text-sm text-zinc-500">
-              {step === 'password'
-                ? 'Sign in with your email and password.'
-                : step === 'recoverPassword'
-                  ? 'Choose a new password for your account.'
-                  : step === 'otp'
-                    ? 'Enter the one-time code we sent to your email.'
-                    : 'Enter your registered email. First-time sign-in uses a one-time code; after that, use your password.'}
-            </p>
-          </div>
+    <div className="relative flex min-h-screen flex-col bg-page">
+      <GridBackground />
+      <div className="relative z-10 flex min-h-screen flex-col">
+        <AppTopbar />
+        <div className="flex flex-1 flex-col items-center justify-center gap-4 px-4 py-10">
+          <PublicNotificationsPanel />
+          <div className="card-app w-full max-w-md space-y-5 p-8">
+            <div className="flex flex-wrap gap-2 border-b border-zinc-200 pb-4">
+              <span className="nav-tab nav-tab-active">Sign in</span>
+              <Link to="/nominations" className="nav-tab nav-tab-inactive no-underline">
+                Nominations
+              </Link>
+            </div>
+            <div className="space-y-1">
+              <h2 className="text-xl font-bold tracking-tight text-zinc-900">Welcome back</h2>
+              <p className="text-sm text-zinc-500">
+                {step === 'password'
+                  ? 'Sign in with your email and password.'
+                  : step === 'recoverPassword'
+                    ? 'Choose a new password for your account.'
+                    : step === 'otp'
+                      ? 'Enter the one-time code we sent to your email.'
+                      : 'Enter your registered email. First-time sign-in uses a one-time code; after that, use your password.'}
+              </p>
+            </div>
 
           {step === 'recoverPassword' ? (
             <form className="space-y-4" onSubmit={(e) => void handleRecoverySetPassword(e)}>
@@ -528,8 +531,7 @@ export function LoginPage() {
                         Find your registration
                       </label>
                       <p className="mb-2 text-xs text-zinc-500">
-                        Search by your name as it appears on the voter list. Most of your address before @ and most of
-                        the domain before .com (or similar) are blurred.
+                        Search by your name
                       </p>
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
                         <input
@@ -750,6 +752,7 @@ export function LoginPage() {
           {error ? <p className="text-sm font-medium text-red-700">{error}</p> : null}
         </div>
         <AppCreditFooter className="mt-8 w-full max-w-md" />
+      </div>
       </div>
     </div>
   )
