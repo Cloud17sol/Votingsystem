@@ -588,7 +588,7 @@ export function LoginPage() {
                         className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500"
                         htmlFor="email"
                       >
-                        Email
+                        Sign in with email
                       </label>
                       <input
                         id="email"
