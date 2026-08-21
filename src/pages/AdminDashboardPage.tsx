@@ -61,6 +61,15 @@ type Member = {
   is_admin: boolean
 }
 
+type RegistrationRequest = {
+  id: string
+  full_name: string
+  email: string
+  note: string | null
+  status: 'pending' | 'approved' | 'rejected'
+  created_at: string
+}
+
 type VoteItem = {
   candidate_id: string
 }
@@ -258,6 +267,8 @@ export function AdminDashboardPage() {
   const [positions, setPositions] = useState<Position[]>([])
   const [candidates, setCandidates] = useState<Candidate[]>([])
   const [members, setMembers] = useState<Member[]>([])
+  const [registrationRequests, setRegistrationRequests] = useState<RegistrationRequest[]>([])
+  const [registrationActionId, setRegistrationActionId] = useState<string | null>(null)
   const [votesCount, setVotesCount] = useState(0)
   const [eligibleMembersCount, setEligibleMembersCount] = useState(0)
 
@@ -431,10 +442,18 @@ export function AdminDashboardPage() {
       .limit(50)
     setMembers((memberRows as Member[] | null) ?? [])
 
+    const { data: requestRows } = await supabase
+      .from('member_registration_requests')
+      .select('id,full_name,email,note,status,created_at')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: true })
+    setRegistrationRequests((requestRows as RegistrationRequest[] | null) ?? [])
+
     const { count: eligibleCount } = await supabase
       .from('members')
       .select('id', { count: 'exact', head: true })
       .eq('is_eligible', true)
+      .eq('is_admin', false)
     setEligibleMembersCount(eligibleCount ?? 0)
 
     const nomPosRes = await supabase
@@ -926,6 +945,52 @@ export function AdminDashboardPage() {
     setMemberEligible(true)
     setMemberAdmin(false)
     await loadAll()
+  }
+
+  async function handleApproveRegistration(request: RegistrationRequest) {
+    const ok = window.confirm(
+      `Approve registration for "${request.full_name}" (${request.email})? They will become an eligible member.`,
+    )
+    if (!ok) return
+    setError('')
+    setRegistrationActionId(request.id)
+    const { data, error: rpcError } = await supabase.rpc('approve_member_registration_request', {
+      p_request_id: request.id,
+    })
+    setRegistrationActionId(null)
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    const result = data as { ok?: boolean; error?: string } | null
+    if (!result?.ok) {
+      setError(result?.error || 'Unable to approve request.')
+      return
+    }
+    await loadAll()
+  }
+
+  async function handleRejectRegistration(request: RegistrationRequest) {
+    const ok = window.confirm(
+      `Reject registration for "${request.full_name}" (${request.email})?`,
+    )
+    if (!ok) return
+    setError('')
+    setRegistrationActionId(request.id)
+    const { data, error: rpcError } = await supabase.rpc('reject_member_registration_request', {
+      p_request_id: request.id,
+    })
+    setRegistrationActionId(null)
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    const result = data as { ok?: boolean; error?: string } | null
+    if (!result?.ok) {
+      setError(result?.error || 'Unable to reject request.')
+      return
+    }
+    setRegistrationRequests((prev) => prev.filter((r) => r.id !== request.id))
   }
 
   function openMemberView(member: Member) {
@@ -1923,6 +1988,65 @@ export function AdminDashboardPage() {
           <section className="card-app p-4 space-y-3">
             <h2 className="text-lg font-bold text-zinc-900">Members</h2>
             <p className="text-sm text-zinc-600">Add eligible alumni by email. Auth User ID is optional.</p>
+
+            <div className="space-y-3 rounded-2xl border border-mint-700/20 bg-mint-50/50 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-base font-bold text-zinc-900">Registration requests</h3>
+                <span className="rounded-full bg-forest-900/10 px-2.5 py-0.5 text-xs font-semibold text-forest-900">
+                  {registrationRequests.length} pending
+                </span>
+              </div>
+              <p className="text-xs text-zinc-600">
+                People who submitted the public Register form. Approve to add them as eligible members.
+              </p>
+              {registrationRequests.length === 0 ? (
+                <p className="text-sm text-zinc-500">No pending requests.</p>
+              ) : (
+                <ul className="space-y-3">
+                  {registrationRequests.map((request) => (
+                    <li
+                      key={request.id}
+                      className="rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm"
+                    >
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="min-w-0 space-y-1">
+                          <p className="font-semibold text-zinc-900">{request.full_name}</p>
+                          <p className="text-sm text-zinc-600 break-all">{request.email}</p>
+                          {request.note ? (
+                            <p className="text-sm text-zinc-500 whitespace-pre-wrap">{request.note}</p>
+                          ) : null}
+                          <p className="text-xs text-zinc-400">
+                            {new Date(request.created_at).toLocaleString(undefined, {
+                              dateStyle: 'medium',
+                              timeStyle: 'short',
+                            })}
+                          </p>
+                        </div>
+                        <div className="flex shrink-0 gap-2">
+                          <button
+                            type="button"
+                            className="btn-primary-sm bg-mint-700 hover:bg-mint-800"
+                            disabled={registrationActionId === request.id}
+                            onClick={() => void handleApproveRegistration(request)}
+                          >
+                            {registrationActionId === request.id ? '…' : 'Approve'}
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-danger-outline px-3 py-1.5 text-xs"
+                            disabled={registrationActionId === request.id}
+                            onClick={() => void handleRejectRegistration(request)}
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
             <form className="grid gap-3 sm:grid-cols-2" onSubmit={handleAddMember}>
               <input
                 className="input-app sm:col-span-2"

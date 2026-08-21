@@ -457,6 +457,9 @@ export function LoginPage() {
           <div className="card-app w-full max-w-md space-y-5 p-8">
             <div className="flex flex-wrap gap-2 border-b border-zinc-200 pb-4">
               <span className="nav-tab nav-tab-active">Sign in</span>
+              <Link to="/register" className="nav-tab nav-tab-inactive no-underline">
+                Register
+              </Link>
               <Link to="/nominations" className="nav-tab nav-tab-inactive no-underline">
                 Nominations
               </Link>

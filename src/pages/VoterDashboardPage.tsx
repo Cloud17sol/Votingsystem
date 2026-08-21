@@ -207,6 +207,8 @@ export function VoterDashboardPage() {
             </p>
           </div>
 
+          <MemberNotificationsPanel />
+
           {loadError ? (
             <div className="card-app space-y-3 p-6">
               <p className="text-sm text-red-700">{loadError}</p>
@@ -319,7 +321,6 @@ export function VoterDashboardPage() {
               <p>Review your choices carefully before submitting. Votes cannot be changed.</p>
               <p>Use a private device when possible. Sign out when you are finished.</p>
             </div>
-            <MemberNotificationsPanel />
           </section>
 
           <AppCreditFooter className="mt-auto pt-4" />

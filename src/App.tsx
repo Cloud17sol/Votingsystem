@@ -7,6 +7,7 @@ import { ReviewBallotPage } from './pages/ReviewBallotPage'
 import { ConfirmationPage } from './pages/ConfirmationPage'
 import { AdminDashboardPage } from './pages/AdminDashboardPage'
 import { NominationsPage } from './pages/NominationsPage'
+import { RegistrationPage } from './pages/RegistrationPage'
 import { VoterDashboardPage } from './pages/VoterDashboardPage'
 import { ProtectedVoterRoute } from './routes/ProtectedVoterRoute'
 import { ProtectedAdminRoute } from './routes/ProtectedAdminRoute'
@@ -19,6 +20,7 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/set-password" element={<SetPasswordPage />} />
         <Route path="/nominations" element={<NominationsPage />} />
+        <Route path="/register" element={<RegistrationPage />} />
         <Route path="/not-eligible" element={<NotEligiblePage />} />
         <Route path="/confirmation" element={<ConfirmationPage />} />
         <Route path="/dashboard" element={<VoterDashboardPage />} />

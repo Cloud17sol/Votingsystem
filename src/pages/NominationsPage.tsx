@@ -161,6 +161,9 @@ export function NominationsPage() {
             <Link to="/login" className="nav-tab nav-tab-inactive no-underline">
               Sign in
             </Link>
+            <Link to="/register" className="nav-tab nav-tab-inactive no-underline">
+              Register
+            </Link>
             <span className="nav-tab nav-tab-active">Nominations</span>
           </div>
 

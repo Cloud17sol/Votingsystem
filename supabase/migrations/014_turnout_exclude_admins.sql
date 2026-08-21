@@ -1,6 +1,6 @@
 begin;
 
--- Aggregate turnout only (no PII). Callable by authenticated members for open elections.
+-- Exclude admins: they cannot vote and must not count as registered voters.
 create or replace function public.get_election_turnout_stats(p_election_id uuid)
 returns table (
   registered_eligible bigint,
