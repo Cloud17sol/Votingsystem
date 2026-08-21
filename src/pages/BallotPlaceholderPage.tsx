@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { AppCreditFooter } from '../components/AppCreditFooter'
 import { AppTopbar } from '../components/AppTopbar'
 import { MemberNotificationsPanel } from '../components/MemberNotificationsPanel'
+import { VoterNav } from '../components/VoterNav'
 import { supabase } from '../lib/supabase'
 import { fetchMyMemberFullName } from '../lib/voterEligibility'
 
@@ -301,6 +302,7 @@ export function BallotPlaceholderPage() {
     <div className="flex min-h-screen flex-col bg-page">
       <AppTopbar />
       <div className="mx-auto w-full max-w-2xl space-y-4 px-4 py-6">
+        <VoterNav active="ballot" canVote />
         <MemberNotificationsPanel />
         <div className="card-app overflow-hidden shadow-[0_8px_40px_rgba(20,51,42,0.12)]">
           <div className="relative bg-gradient-to-br from-forest-950 via-forest-900 to-[#1d5c47] px-5 pb-10 pt-6 sm:px-6 sm:pb-11">
@@ -389,9 +391,6 @@ export function BallotPlaceholderPage() {
 
         <div className="card-app flex flex-col gap-3 p-5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <div className="flex flex-col gap-2 sm:flex-row sm:gap-2">
-            <button type="button" className="btn-secondary" onClick={handleSignOut}>
-              Sign out
-            </button>
             <button
               type="button"
               className="rounded-full border border-amber-200/90 bg-amber-50/80 px-4 py-2 text-sm font-medium text-amber-950 transition-colors hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-40"

@@ -1,11 +1,12 @@
 import type { NavigateFunction } from 'react-router-dom'
 import { supabase } from './supabase'
-import { checkVoterEligibility } from './voterEligibility'
+import { fetchMyVoterStatus } from './voterEligibility'
 
 /**
  * After a successful session (OTP, password, or recovery), route admins to /admin,
- * eligible voters to /ballot, or send registered members who cannot vote yet to /not-eligible
- * (session kept so they can read member-only notifications). Unregistered emails are signed out.
+ * eligible (or already-voted) voters to /dashboard, or send registered members who cannot
+ * vote to /not-eligible (session kept so they can read member-only notifications).
+ * Unregistered emails are signed out.
  */
 export async function completeAuthenticatedMemberRouting(
   navigate: NavigateFunction,
@@ -40,12 +41,23 @@ export async function completeAuthenticatedMemberRouting(
     return {}
   }
 
-  const eligibility = await checkVoterEligibility(user)
-  if (!eligibility.eligible) {
-    navigate('/not-eligible', { replace: true, state: { reason: eligibility.reason } })
+  const status = await fetchMyVoterStatus()
+  if (!status) {
+    return { errorMessage: 'Unable to verify account access.' }
+  }
+
+  if (
+    status.eligible ||
+    status.alreadyVoted ||
+    status.reason === 'There is no active election right now.'
+  ) {
+    navigate('/dashboard', { replace: true })
     return {}
   }
 
-  navigate('/ballot', { replace: true })
+  navigate('/not-eligible', {
+    replace: true,
+    state: { reason: status.reason ?? 'You are not eligible to vote in this election.' },
+  })
   return {}
 }

@@ -1,9 +1,14 @@
 import { useEffect, useState } from 'react'
 import { Navigate, Outlet } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { checkVoterEligibility } from '../lib/voterEligibility'
+import { fetchMyVoterStatus } from '../lib/voterEligibility'
 
-type GuardState = 'loading' | 'allowed' | 'unauthenticated' | 'denied'
+type GuardState =
+  | 'loading'
+  | 'allowed'
+  | 'unauthenticated'
+  | 'denied'
+  | 'already_voted'
 
 export function ProtectedVoterRoute() {
   const [state, setState] = useState<GuardState>('loading')
@@ -21,15 +26,26 @@ export function ProtectedVoterRoute() {
         return
       }
 
-      const result = await checkVoterEligibility(session.user)
+      const status = await fetchMyVoterStatus()
       if (cancelled) return
 
-      if (result.eligible) {
+      if (!status) {
+        setReason('Unable to verify eligibility right now.')
+        setState('denied')
+        return
+      }
+
+      if (status.eligible) {
         setState('allowed')
         return
       }
 
-      setReason(result.reason)
+      if (status.alreadyVoted) {
+        setState('already_voted')
+        return
+      }
+
+      setReason(status.reason ?? 'You are not eligible to vote in this election.')
       setState('denied')
     }
 
@@ -49,6 +65,10 @@ export function ProtectedVoterRoute() {
 
   if (state === 'unauthenticated') {
     return <Navigate to="/login" replace />
+  }
+
+  if (state === 'already_voted') {
+    return <Navigate to="/dashboard" replace />
   }
 
   if (state === 'denied') {

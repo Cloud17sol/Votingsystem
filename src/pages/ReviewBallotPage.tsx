@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { AppCreditFooter } from '../components/AppCreditFooter'
 import { AppTopbar } from '../components/AppTopbar'
 import { MemberNotificationsPanel } from '../components/MemberNotificationsPanel'
+import { VoterNav } from '../components/VoterNav'
 import { supabase } from '../lib/supabase'
 import { fetchMyMemberFullName } from '../lib/voterEligibility'
 
@@ -97,6 +98,7 @@ export function ReviewBallotPage() {
     <div className="flex min-h-screen flex-col bg-page">
       <AppTopbar />
       <div className="mx-auto w-full max-w-2xl space-y-4 px-4 py-6">
+        <VoterNav active="ballot" canVote />
         <MemberNotificationsPanel />
         <div className="card-app overflow-hidden shadow-[0_8px_40px_rgba(20,51,42,0.12)]">
           <div className="relative bg-gradient-to-br from-forest-950 via-forest-900 to-[#1d5c47] px-5 pb-10 pt-6 sm:px-6 sm:pb-11">

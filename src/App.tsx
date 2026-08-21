@@ -7,6 +7,7 @@ import { ReviewBallotPage } from './pages/ReviewBallotPage'
 import { ConfirmationPage } from './pages/ConfirmationPage'
 import { AdminDashboardPage } from './pages/AdminDashboardPage'
 import { NominationsPage } from './pages/NominationsPage'
+import { VoterDashboardPage } from './pages/VoterDashboardPage'
 import { ProtectedVoterRoute } from './routes/ProtectedVoterRoute'
 import { ProtectedAdminRoute } from './routes/ProtectedAdminRoute'
 
@@ -20,6 +21,7 @@ function App() {
         <Route path="/nominations" element={<NominationsPage />} />
         <Route path="/not-eligible" element={<NotEligiblePage />} />
         <Route path="/confirmation" element={<ConfirmationPage />} />
+        <Route path="/dashboard" element={<VoterDashboardPage />} />
         <Route element={<ProtectedAdminRoute />}>
           <Route path="/admin" element={<AdminDashboardPage />} />
         </Route>
