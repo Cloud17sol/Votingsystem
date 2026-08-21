@@ -66,7 +66,7 @@ export function RegistrationPage() {
             </div>
 
             <div className="space-y-1">
-              <h2 className="text-xl font-bold tracking-tight text-zinc-900">Request membership</h2>
+              <h2 className="text-xl font-bold tracking-tight text-zinc-900">Voter&apos;s Registration</h2>
               <p className="text-sm text-zinc-500">
                 Submit your details for admin review. Once approved, you can sign in with this email.
               </p>
@@ -94,6 +94,10 @@ export function RegistrationPage() {
                   >
                     Full name
                   </label>
+                  <p className="mb-2 text-xs text-zinc-500">
+                    Kindly use your full name for easy identification (nickname or first name only
+                    will be rejected).
+                  </p>
                   <input
                     id="reg-full-name"
                     type="text"
