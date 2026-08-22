@@ -231,7 +231,7 @@ export function LoginPage() {
 
     setEmail(normalizedEmail)
     setStep('otp')
-    setMessage('OTP sent. Enter the code from your email.')
+    setMessage('OTP sent. Enter the code from your email. Also check your SPAM inbox for the OTP.')
     setResendCountdown(30)
     persistLoginFlow('otp', normalizedEmail)
   }
@@ -280,7 +280,7 @@ export function LoginPage() {
     }
 
     setEmail(normalizedEmail)
-    setMessage('A new code has been sent to your email.')
+    setMessage('A new code has been sent to your email. Also check your SPAM inbox for the OTP.')
     setResendCountdown(30)
     persistLoginFlow('otp', normalizedEmail)
   }
