@@ -68,6 +68,8 @@ type RegistrationRequest = {
   note: string | null
   status: 'pending' | 'approved' | 'rejected'
   created_at: string
+  reviewed_at: string | null
+  reviewer_email: string | null
 }
 
 type VoteItem = {
@@ -78,6 +80,7 @@ type AdminTab =
   | 'election'
   | 'positionsCandidates'
   | 'members'
+  | 'registrations'
   | 'nominations'
   | 'notifications'
   | 'results'
@@ -85,6 +88,8 @@ type AdminTab =
 type NominationsSubTab = 'positions' | 'received'
 
 type PositionsCandidatesSubTab = 'positions' | 'candidates'
+
+type RegistrationsFilter = 'pending' | 'approved' | 'rejected' | 'all'
 
 function toInputDateTime(value: string | null): string {
   if (!value) return ''
@@ -292,6 +297,7 @@ export function AdminDashboardPage() {
   const [nominationsSubTab, setNominationsSubTab] = useState<NominationsSubTab>('positions')
   const [positionsCandidatesSubTab, setPositionsCandidatesSubTab] =
     useState<PositionsCandidatesSubTab>('positions')
+  const [registrationsFilter, setRegistrationsFilter] = useState<RegistrationsFilter>('pending')
 
   const [memberAuthUserId, setMemberAuthUserId] = useState('')
   const [memberEmail, setMemberEmail] = useState('')
@@ -356,6 +362,16 @@ export function AdminDashboardPage() {
     () => positions.length > 0 && selectedPositionIds.length === positions.length,
     [positions.length, selectedPositionIds.length],
   )
+
+  const pendingRegistrationCount = useMemo(
+    () => registrationRequests.filter((r) => r.status === 'pending').length,
+    [registrationRequests],
+  )
+
+  const filteredRegistrationRequests = useMemo(() => {
+    if (registrationsFilter === 'all') return registrationRequests
+    return registrationRequests.filter((r) => r.status === registrationsFilter)
+  }, [registrationRequests, registrationsFilter])
 
   async function loadAll() {
     setLoading(true)
@@ -444,9 +460,9 @@ export function AdminDashboardPage() {
 
     const { data: requestRows } = await supabase
       .from('member_registration_requests')
-      .select('id,full_name,email,note,status,created_at')
-      .eq('status', 'pending')
-      .order('created_at', { ascending: true })
+      .select('id,full_name,email,note,status,created_at,reviewed_at,reviewer_email')
+      .order('created_at', { ascending: false })
+      .limit(150)
     setRegistrationRequests((requestRows as RegistrationRequest[] | null) ?? [])
 
     const { count: eligibleCount } = await supabase
@@ -990,7 +1006,7 @@ export function AdminDashboardPage() {
       setError(result?.error || 'Unable to reject request.')
       return
     }
-    setRegistrationRequests((prev) => prev.filter((r) => r.id !== request.id))
+    await loadAll()
   }
 
   function openMemberView(member: Member) {
@@ -1457,6 +1473,14 @@ export function AdminDashboardPage() {
             onClick={() => setActiveTab('members')}
           >
             Members
+          </button>
+          <button
+            type="button"
+            className={`nav-tab ${activeTab === 'registrations' ? 'nav-tab-active' : 'nav-tab-inactive'}`}
+            onClick={() => setActiveTab('registrations')}
+          >
+            Registrations
+            {pendingRegistrationCount > 0 ? ` (${pendingRegistrationCount})` : ''}
           </button>
           <button
             type="button"
@@ -1989,64 +2013,6 @@ export function AdminDashboardPage() {
             <h2 className="text-lg font-bold text-zinc-900">Members</h2>
             <p className="text-sm text-zinc-600">Add eligible alumni by email. Auth User ID is optional.</p>
 
-            <div className="space-y-3 rounded-2xl border border-mint-700/20 bg-mint-50/50 p-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h3 className="text-base font-bold text-zinc-900">Registration requests</h3>
-                <span className="rounded-full bg-forest-900/10 px-2.5 py-0.5 text-xs font-semibold text-forest-900">
-                  {registrationRequests.length} pending
-                </span>
-              </div>
-              <p className="text-xs text-zinc-600">
-                People who submitted the public Register form. Approve to add them as eligible members.
-              </p>
-              {registrationRequests.length === 0 ? (
-                <p className="text-sm text-zinc-500">No pending requests.</p>
-              ) : (
-                <ul className="space-y-3">
-                  {registrationRequests.map((request) => (
-                    <li
-                      key={request.id}
-                      className="rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm"
-                    >
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                        <div className="min-w-0 space-y-1">
-                          <p className="font-semibold text-zinc-900">{request.full_name}</p>
-                          <p className="text-sm text-zinc-600 break-all">{request.email}</p>
-                          {request.note ? (
-                            <p className="text-sm text-zinc-500 whitespace-pre-wrap">{request.note}</p>
-                          ) : null}
-                          <p className="text-xs text-zinc-400">
-                            {new Date(request.created_at).toLocaleString(undefined, {
-                              dateStyle: 'medium',
-                              timeStyle: 'short',
-                            })}
-                          </p>
-                        </div>
-                        <div className="flex shrink-0 gap-2">
-                          <button
-                            type="button"
-                            className="btn-primary-sm bg-mint-700 hover:bg-mint-800"
-                            disabled={registrationActionId === request.id}
-                            onClick={() => void handleApproveRegistration(request)}
-                          >
-                            {registrationActionId === request.id ? '…' : 'Approve'}
-                          </button>
-                          <button
-                            type="button"
-                            className="btn-danger-outline px-3 py-1.5 text-xs"
-                            disabled={registrationActionId === request.id}
-                            onClick={() => void handleRejectRegistration(request)}
-                          >
-                            Reject
-                          </button>
-                        </div>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-
             <form className="grid gap-3 sm:grid-cols-2" onSubmit={handleAddMember}>
               <input
                 className="input-app sm:col-span-2"
@@ -2554,6 +2520,114 @@ export function AdminDashboardPage() {
                 </div>
               </div>
             ) : null}
+          </section>
+        ) : null}
+
+        {activeTab === 'registrations' ? (
+          <section className="card-app space-y-4 p-4">
+            <div className="space-y-1">
+              <h2 className="text-lg font-bold text-zinc-900">Registration approvals</h2>
+              <p className="text-sm text-zinc-600">
+                Review requests from the public Register form. Approving adds an eligible member.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-2 border-b border-zinc-200 pb-3">
+              {(
+                [
+                  ['pending', 'Pending'],
+                  ['approved', 'Approved'],
+                  ['rejected', 'Rejected'],
+                  ['all', 'All'],
+                ] as const
+              ).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  className={`nav-tab ${registrationsFilter === value ? 'nav-tab-active' : 'nav-tab-inactive'}`}
+                  onClick={() => setRegistrationsFilter(value)}
+                >
+                  {label}
+                  {value === 'pending' && pendingRegistrationCount > 0
+                    ? ` (${pendingRegistrationCount})`
+                    : ''}
+                </button>
+              ))}
+            </div>
+
+            {filteredRegistrationRequests.length === 0 ? (
+              <p className="text-sm text-zinc-500">
+                {registrationsFilter === 'pending'
+                  ? 'No pending requests.'
+                  : 'No requests in this view.'}
+              </p>
+            ) : (
+              <ul className="space-y-3">
+                {filteredRegistrationRequests.map((request) => (
+                  <li
+                    key={request.id}
+                    className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm"
+                  >
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0 space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="font-semibold text-zinc-900">{request.full_name}</p>
+                          <span
+                            className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                              request.status === 'pending'
+                                ? 'bg-amber-50 text-amber-900 ring-1 ring-amber-200'
+                                : request.status === 'approved'
+                                  ? 'bg-mint-100 text-mint-800 ring-1 ring-mint-700/15'
+                                  : 'bg-zinc-100 text-zinc-700 ring-1 ring-zinc-200'
+                            }`}
+                          >
+                            {request.status}
+                          </span>
+                        </div>
+                        <p className="text-sm text-zinc-600 break-all">{request.email}</p>
+                        {request.note ? (
+                          <p className="text-sm text-zinc-500 whitespace-pre-wrap">{request.note}</p>
+                        ) : null}
+                        <p className="text-xs text-zinc-400">
+                          Submitted{' '}
+                          {new Date(request.created_at).toLocaleString(undefined, {
+                            dateStyle: 'medium',
+                            timeStyle: 'short',
+                          })}
+                          {request.reviewed_at
+                            ? ` · Reviewed ${new Date(request.reviewed_at).toLocaleString(undefined, {
+                                dateStyle: 'medium',
+                                timeStyle: 'short',
+                              })}`
+                            : ''}
+                          {request.reviewer_email ? ` · ${request.reviewer_email}` : ''}
+                        </p>
+                      </div>
+                      {request.status === 'pending' ? (
+                        <div className="flex shrink-0 gap-2">
+                          <button
+                            type="button"
+                            className="btn-primary-sm bg-mint-700 hover:bg-mint-800"
+                            disabled={registrationActionId === request.id}
+                            onClick={() => void handleApproveRegistration(request)}
+                          >
+                            {registrationActionId === request.id ? '…' : 'Approve'}
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-danger-outline px-3 py-1.5 text-xs"
+                            disabled={registrationActionId === request.id}
+                            onClick={() => void handleRejectRegistration(request)}
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
           </section>
         ) : null}
 
