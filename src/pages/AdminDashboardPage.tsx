@@ -1009,6 +1009,47 @@ export function AdminDashboardPage() {
     await loadAll()
   }
 
+  async function handleDeleteRegistration(request: RegistrationRequest) {
+    const ok = window.confirm(
+      `Delete registration request for "${request.full_name}" (${request.email})? This cannot be undone.`,
+    )
+    if (!ok) return
+    setError('')
+    setRegistrationActionId(request.id)
+    const { error: deleteError } = await supabase
+      .from('member_registration_requests')
+      .delete()
+      .eq('id', request.id)
+    setRegistrationActionId(null)
+    if (deleteError) {
+      setError(deleteError.message)
+      return
+    }
+    await loadAll()
+  }
+
+  async function handleDeleteAllRegistrationRequests() {
+    if (registrationRequests.length === 0) return
+    const ok = window.confirm(
+      `Delete ALL registration requests (pending, approved, and rejected)? This removes every request in the database and cannot be undone.`,
+    )
+    if (!ok) return
+    setError('')
+    setRegistrationActionId('__all__')
+    // PostgREST requires a filter; this matches every row.
+    const { error: deleteError } = await supabase
+      .from('member_registration_requests')
+      .delete()
+      .gte('created_at', '1970-01-01T00:00:00.000Z')
+    setRegistrationActionId(null)
+    if (deleteError) {
+      setError(deleteError.message)
+      return
+    }
+    setRegistrationRequests([])
+    await loadAll()
+  }
+
   function openMemberView(member: Member) {
     setError('')
     setMemberModal({ mode: 'view', member })
@@ -2563,14 +2604,24 @@ export function AdminDashboardPage() {
                   Review requests from the public Register form. Approving adds an eligible member.
                 </p>
               </div>
-              <button
-                type="button"
-                className="btn-primary-sm inline-flex shrink-0 gap-2 disabled:cursor-not-allowed"
-                disabled={registrationRequests.length === 0}
-                onClick={handleExportRegistrationRequestsCsv}
-              >
-                Export CSV
-              </button>
+              <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
+                <button
+                  type="button"
+                  className="btn-primary-sm inline-flex gap-2 disabled:cursor-not-allowed"
+                  disabled={registrationRequests.length === 0 || registrationActionId !== null}
+                  onClick={handleExportRegistrationRequestsCsv}
+                >
+                  Export CSV
+                </button>
+                <button
+                  type="button"
+                  className="btn-danger-outline px-3 py-1.5 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={registrationRequests.length === 0 || registrationActionId !== null}
+                  onClick={() => void handleDeleteAllRegistrationRequests()}
+                >
+                  {registrationActionId === '__all__' ? 'Deleting…' : 'Delete all'}
+                </button>
+              </div>
             </div>
 
             <div className="flex flex-wrap gap-2 border-b border-zinc-200 pb-3">
@@ -2644,26 +2695,36 @@ export function AdminDashboardPage() {
                           {request.reviewer_email ? ` · ${request.reviewer_email}` : ''}
                         </p>
                       </div>
-                      {request.status === 'pending' ? (
-                        <div className="flex shrink-0 gap-2">
-                          <button
-                            type="button"
-                            className="btn-primary-sm bg-mint-700 hover:bg-mint-800"
-                            disabled={registrationActionId === request.id}
-                            onClick={() => void handleApproveRegistration(request)}
-                          >
-                            {registrationActionId === request.id ? '…' : 'Approve'}
-                          </button>
-                          <button
-                            type="button"
-                            className="btn-danger-outline px-3 py-1.5 text-xs"
-                            disabled={registrationActionId === request.id}
-                            onClick={() => void handleRejectRegistration(request)}
-                          >
-                            Reject
-                          </button>
-                        </div>
-                      ) : null}
+                      <div className="flex shrink-0 flex-wrap gap-2">
+                        {request.status === 'pending' ? (
+                          <>
+                            <button
+                              type="button"
+                              className="btn-primary-sm bg-mint-700 hover:bg-mint-800"
+                              disabled={registrationActionId !== null}
+                              onClick={() => void handleApproveRegistration(request)}
+                            >
+                              {registrationActionId === request.id ? '…' : 'Approve'}
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-danger-outline px-3 py-1.5 text-xs"
+                              disabled={registrationActionId !== null}
+                              onClick={() => void handleRejectRegistration(request)}
+                            >
+                              Reject
+                            </button>
+                          </>
+                        ) : null}
+                        <button
+                          type="button"
+                          className="btn-danger-outline px-3 py-1.5 text-xs"
+                          disabled={registrationActionId !== null}
+                          onClick={() => void handleDeleteRegistration(request)}
+                        >
+                          {registrationActionId === request.id ? '…' : 'Delete'}
+                        </button>
+                      </div>
                     </div>
                   </li>
                 ))}
