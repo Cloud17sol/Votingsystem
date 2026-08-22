@@ -1427,6 +1427,37 @@ export function AdminDashboardPage() {
     URL.revokeObjectURL(url)
   }
 
+  function handleExportRegistrationRequestsCsv() {
+    if (registrationRequests.length === 0) return
+    const lines: string[] = [
+      'Full name,Email,Note,Status,Submitted (UTC),Reviewed (UTC),Reviewer email',
+    ]
+    for (const row of registrationRequests) {
+      const submitted = row.created_at ? new Date(row.created_at).toISOString() : ''
+      const reviewed = row.reviewed_at ? new Date(row.reviewed_at).toISOString() : ''
+      lines.push(
+        [
+          row.full_name,
+          row.email,
+          row.note ?? '',
+          row.status,
+          submitted,
+          reviewed,
+          row.reviewer_email ?? '',
+        ]
+          .map(escapeCsvCell)
+          .join(','),
+      )
+    }
+    const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `registration-requests-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   if (loading) {
     return (
       <div className="flex min-h-screen flex-col bg-page">
@@ -2525,11 +2556,21 @@ export function AdminDashboardPage() {
 
         {activeTab === 'registrations' ? (
           <section className="card-app space-y-4 p-4">
-            <div className="space-y-1">
-              <h2 className="text-lg font-bold text-zinc-900">Registration approvals</h2>
-              <p className="text-sm text-zinc-600">
-                Review requests from the public Register form. Approving adds an eligible member.
-              </p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+              <div className="space-y-1">
+                <h2 className="text-lg font-bold text-zinc-900">Registration approvals</h2>
+                <p className="text-sm text-zinc-600">
+                  Review requests from the public Register form. Approving adds an eligible member.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="btn-primary-sm inline-flex shrink-0 gap-2 disabled:cursor-not-allowed"
+                disabled={registrationRequests.length === 0}
+                onClick={handleExportRegistrationRequestsCsv}
+              >
+                Export CSV
+              </button>
             </div>
 
             <div className="flex flex-wrap gap-2 border-b border-zinc-200 pb-3">
