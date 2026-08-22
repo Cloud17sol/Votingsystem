@@ -77,8 +77,8 @@ export function RegistrationPage() {
                 <div className="rounded-2xl border border-mint-700/20 bg-mint-50/80 px-4 py-3">
                   <p className="text-sm font-medium text-mint-900">Request submitted</p>
                   <p className="mt-1 text-sm text-mint-800">
-                    An administrator will review your registration. You will be able to sign in after
-                    approval.
+                    The election committee will review your registration. You will be NOTIFIED and be
+                    able to sign in after approval.
                   </p>
                 </div>
                 <Link to="/login" className="btn-primary inline-flex w-full no-underline">
