@@ -923,6 +923,26 @@ export function AdminDashboardPage() {
     await loadAll()
   }
 
+  async function handleDeleteAllNominations() {
+    if (nominations.length === 0) return
+    const ok = window.confirm(
+      'Delete ALL received nominations (every submission in the database)? This cannot be undone.',
+    )
+    if (!ok) return
+    setError('')
+    setAdminActionLoading(true)
+    const { error: deleteError } = await supabase
+      .from('nominations')
+      .delete()
+      .gte('created_at', '1970-01-01T00:00:00.000Z')
+    setAdminActionLoading(false)
+    if (deleteError) {
+      setError(deleteError.message)
+      return
+    }
+    await loadAll()
+  }
+
   async function handleToggleNominationSubmissions() {
     setError('')
     setAdminActionLoading(true)
@@ -2132,6 +2152,20 @@ export function AdminDashboardPage() {
               </button>
             </form>
             <form className="grid gap-3 sm:grid-cols-2" onSubmit={handleImportMembersCsv}>
+              <div className="sm:col-span-2 space-y-2 rounded-2xl border border-zinc-200 bg-zinc-50/80 px-4 py-3 text-sm text-zinc-600">
+                <p className="font-medium text-zinc-800">CSV format</p>
+                <p>
+                  Header row required. Must include <code className="text-xs">email</code> and{' '}
+                  <code className="text-xs">full_name</code>.
+                </p>
+                <a
+                  href="/example-members-import.csv"
+                  download
+                  className="inline-flex text-sm font-semibold text-forest-900 underline-offset-2 hover:underline"
+                >
+                  Download example CSV
+                </a>
+              </div>
               <input
                 name="membersCsv"
                 type="file"
@@ -2879,14 +2913,24 @@ export function AdminDashboardPage() {
                           the Form positions tab).
                         </p>
                       </div>
-                      <button
-                        type="button"
-                        className="btn-primary-sm inline-flex shrink-0 gap-2 disabled:cursor-not-allowed"
-                        disabled={nominations.length === 0}
-                        onClick={handleExportNominationsCsv}
-                      >
-                        Export CSV
-                      </button>
+                      <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
+                        <button
+                          type="button"
+                          className="btn-primary-sm inline-flex gap-2 disabled:cursor-not-allowed"
+                          disabled={nominations.length === 0 || adminActionLoading}
+                          onClick={handleExportNominationsCsv}
+                        >
+                          Export CSV
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-danger-outline px-3 py-1.5 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+                          disabled={nominations.length === 0 || adminActionLoading}
+                          onClick={() => void handleDeleteAllNominations()}
+                        >
+                          {adminActionLoading ? 'Deleting…' : 'Delete all'}
+                        </button>
+                      </div>
                     </div>
                     {nominationPositions.length === 0 ? (
                       <p className="text-sm text-zinc-600">
