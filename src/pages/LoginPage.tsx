@@ -22,9 +22,21 @@ type MemberLoginAuthState = {
 const LOGIN_FLOW_STORAGE_KEY = 'alumni_voting_login_flow_v1'
 const LOGIN_FLOW_TTL_MS = 45 * 60 * 1000
 
-type StoredLoginFlow = { v: 1; step: 'otp' | 'password'; email: string; savedAt: number }
+type OtpPurpose = 'login' | 'recovery'
 
-function loadLoginFlowFromStorage(): { step: 'otp' | 'password'; email: string } | null {
+type StoredLoginFlow = {
+  v: 1
+  step: 'otp' | 'password' | 'recoverPassword'
+  email: string
+  savedAt: number
+  otpPurpose?: OtpPurpose
+}
+
+function loadLoginFlowFromStorage(): {
+  step: 'otp' | 'password' | 'recoverPassword'
+  email: string
+  otpPurpose: OtpPurpose
+} | null {
   if (typeof sessionStorage === 'undefined') return null
   try {
     const raw = sessionStorage.getItem(LOGIN_FLOW_STORAGE_KEY)
@@ -38,20 +50,29 @@ function loadLoginFlowFromStorage(): { step: 'otp' | 'password'; email: string }
       sessionStorage.removeItem(LOGIN_FLOW_STORAGE_KEY)
       return null
     }
-    if (p.step !== 'otp' && p.step !== 'password') return null
-    return { step: p.step, email: p.email }
+    if (p.step !== 'otp' && p.step !== 'password' && p.step !== 'recoverPassword') return null
+    return {
+      step: p.step,
+      email: p.email,
+      otpPurpose: p.otpPurpose === 'recovery' ? 'recovery' : 'login',
+    }
   } catch {
     return null
   }
 }
 
-function persistLoginFlow(step: 'otp' | 'password', normalizedEmail: string) {
+function persistLoginFlow(
+  step: 'otp' | 'password' | 'recoverPassword',
+  normalizedEmail: string,
+  otpPurpose: OtpPurpose = 'login',
+) {
   try {
     const payload: StoredLoginFlow = {
       v: 1,
       step,
       email: normalizedEmail,
       savedAt: Date.now(),
+      otpPurpose: step === 'otp' || step === 'recoverPassword' ? otpPurpose : 'login',
     }
     sessionStorage.setItem(LOGIN_FLOW_STORAGE_KEY, JSON.stringify(payload))
   } catch {
@@ -75,6 +96,9 @@ export function LoginPage() {
     return b.step
   })
   const [email, setEmail] = useState(() => loadLoginFlowFromStorage()?.email ?? '')
+  const [otpPurpose, setOtpPurpose] = useState<OtpPurpose>(
+    () => loadLoginFlowFromStorage()?.otpPurpose ?? 'login',
+  )
   const [loginPassword, setLoginPassword] = useState('')
   const [showLoginPassword, setShowLoginPassword] = useState(false)
   const [recoverPassword, setRecoverPassword] = useState('')
@@ -90,20 +114,27 @@ export function LoginPage() {
   const [nameSearchLoading, setNameSearchLoading] = useState(false)
   const [nameSearchError, setNameSearchError] = useState('')
 
-  const [message, setMessage] = useState(() =>
-    loadLoginFlowFromStorage()?.step === 'otp'
-      ? 'Enter your one-time code. If this page reloaded while you checked your email, you can continue here.'
-      : '',
-  )
+  const [message, setMessage] = useState(() => {
+    const saved = loadLoginFlowFromStorage()
+    if (saved?.step === 'otp') {
+      return saved.otpPurpose === 'recovery'
+        ? 'Enter the code from your email to reset your password. If this page reloaded, you can continue here.'
+        : 'Enter your one-time code. If this page reloaded while you checked your email, you can continue here.'
+    }
+    if (saved?.step === 'recoverPassword') {
+      return 'Choose a new password to finish resetting your account.'
+    }
+    return ''
+  })
 
   useEffect(() => {
-    if (step === 'otp' || step === 'password') {
+    if (step === 'otp' || step === 'password' || step === 'recoverPassword') {
       const normalized = email.trim().toLowerCase()
-      if (normalized) persistLoginFlow(step, normalized)
+      if (normalized) persistLoginFlow(step, normalized, otpPurpose)
     } else {
       clearLoginFlowFromStorage()
     }
-  }, [step, email])
+  }, [step, email, otpPurpose])
 
   useEffect(() => {
     if (resendCountdown <= 0) return
@@ -211,6 +242,7 @@ export function LoginPage() {
 
     if (authState.password_set) {
       setEmail(normalizedEmail)
+      setOtpPurpose('login')
       setStep('password')
       setLoginPassword('')
       setLoading(false)
@@ -230,10 +262,11 @@ export function LoginPage() {
     }
 
     setEmail(normalizedEmail)
+    setOtpPurpose('login')
     setStep('otp')
     setMessage('OTP sent. Enter the code from your email. Also check your SPAM inbox for the OTP.')
     setResendCountdown(30)
-    persistLoginFlow('otp', normalizedEmail)
+    persistLoginFlow('otp', normalizedEmail, 'login')
   }
 
   const handleResendOtp = async () => {
@@ -262,7 +295,7 @@ export function LoginPage() {
       return
     }
 
-    if (authState.password_set) {
+    if (authState.password_set && otpPurpose !== 'recovery') {
       setSending(false)
       setError('This account uses a password. Go back and sign in with your password.')
       return
@@ -280,9 +313,13 @@ export function LoginPage() {
     }
 
     setEmail(normalizedEmail)
-    setMessage('A new code has been sent to your email. Also check your SPAM inbox for the OTP.')
+    setMessage(
+      otpPurpose === 'recovery'
+        ? 'A new reset code has been sent to your email. Also check your SPAM inbox.'
+        : 'A new code has been sent to your email. Also check your SPAM inbox for the OTP.',
+    )
     setResendCountdown(30)
-    persistLoginFlow('otp', normalizedEmail)
+    persistLoginFlow('otp', normalizedEmail, otpPurpose)
   }
 
   async function handleVerifyOtp(event: FormEvent<HTMLFormElement>) {
@@ -337,6 +374,16 @@ export function LoginPage() {
 
     setLoading(false)
 
+    if (otpPurpose === 'recovery') {
+      setOtp('')
+      setRecoverPassword('')
+      setRecoverConfirmPassword('')
+      setStep('recoverPassword')
+      setMessage('Code verified. Choose a new password to continue.')
+      persistLoginFlow('recoverPassword', normalizedUserEmail ?? email.trim().toLowerCase(), 'recovery')
+      return
+    }
+
     if (member.password_set) {
       clearLoginFlowFromStorage()
       const result = await completeAuthenticatedMemberRouting(navigate)
@@ -386,23 +433,39 @@ export function LoginPage() {
     }
 
     const authState = await fetchMemberLoginAuthState(normalizedEmail)
-    if (!authState?.registered) {
+    if (!authState) {
+      return
+    }
+    if (!authState.registered) {
       setError('This email is not registered for voting.')
+      return
+    }
+    if (!authState.password_set) {
+      setError('This account has not set a password yet. Continue with email to receive a sign-in code.')
       return
     }
 
     setLoading(true)
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
-      redirectTo: `${window.location.origin}/login`,
+    const { error: otpError } = await supabase.auth.signInWithOtp({
+      email: normalizedEmail,
     })
     setLoading(false)
 
-    if (resetError) {
-      setError(resetError.message)
+    if (otpError) {
+      setError(mapOtpErrorMessage(otpError.message))
       return
     }
 
-    setMessage('Check your email for a reset link. Open it on this device to choose a new password.')
+    setEmail(normalizedEmail)
+    setOtpPurpose('recovery')
+    setOtp('')
+    setLoginPassword('')
+    setStep('otp')
+    setMessage(
+      'We sent a reset code to your email. Enter it below, then choose a new password. Also check SPAM.',
+    )
+    setResendCountdown(30)
+    persistLoginFlow('otp', normalizedEmail, 'recovery')
   }
 
   async function handleRecoverySetPassword(event: FormEvent<HTMLFormElement>) {
@@ -427,6 +490,14 @@ export function LoginPage() {
       return
     }
 
+    const { error: rpcError } = await supabase.rpc('mark_member_password_set')
+    if (rpcError) {
+      setLoading(false)
+      setError(rpcError.message)
+      return
+    }
+
+    setOtpPurpose('login')
     clearLoginFlowFromStorage()
     const result = await completeAuthenticatedMemberRouting(navigate)
     setLoading(false)
@@ -438,6 +509,7 @@ export function LoginPage() {
   function goBackToEmailStep() {
     clearLoginFlowFromStorage()
     setStep('email')
+    setOtpPurpose('login')
     setOtp('')
     setLoginPassword('')
     setShowLoginPassword(false)
@@ -472,13 +544,21 @@ export function LoginPage() {
                   : step === 'recoverPassword'
                     ? 'Choose a new password for your account.'
                     : step === 'otp'
-                      ? 'Enter the one-time code we sent to your email.'
+                      ? otpPurpose === 'recovery'
+                        ? 'Enter the reset code we sent to your email, then choose a new password.'
+                        : 'Enter the one-time code we sent to your email.'
                       : 'Enter your registered email. First-time sign-in uses a one-time code; after that, use your password.'}
               </p>
             </div>
 
           {step === 'recoverPassword' ? (
             <form className="space-y-4" onSubmit={(e) => void handleRecoverySetPassword(e)}>
+              <div>
+                <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-zinc-500">Email</p>
+                <p className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-800">
+                  {email}
+                </p>
+              </div>
               <div>
                 <label
                   className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500"
@@ -517,6 +597,18 @@ export function LoginPage() {
               </div>
               <button type="submit" disabled={loading} className="btn-primary w-full">
                 {loading ? 'Saving…' : 'Update password and continue'}
+              </button>
+              <button
+                type="button"
+                className="btn-secondary w-full"
+                disabled={loading}
+                onClick={() => {
+                  void supabase.auth.signOut().then(() => {
+                    goBackToEmailStep()
+                  })
+                }}
+              >
+                Cancel
               </button>
             </form>
           ) : null}
@@ -608,6 +700,14 @@ export function LoginPage() {
                     <button type="submit" disabled={loading} className="btn-primary w-full">
                       {loading ? 'Continuing…' : 'Continue'}
                     </button>
+                    <button
+                      type="button"
+                      className="w-full text-center text-sm font-medium text-sky-text hover:underline disabled:opacity-50"
+                      onClick={() => void handleForgotPassword()}
+                      disabled={loading}
+                    >
+                      Forgot password?
+                    </button>
                   </form>
                 </>
               ) : null}
@@ -615,11 +715,17 @@ export function LoginPage() {
               {step === 'otp' ? (
                 <form className="space-y-4" onSubmit={(e) => void handleVerifyOtp(e)}>
                   <div>
+                    <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-zinc-500">Email</p>
+                    <p className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-800">
+                      {email}
+                    </p>
+                  </div>
+                  <div>
                     <label
                       className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500"
                       htmlFor="otp"
                     >
-                      One-time code
+                      {otpPurpose === 'recovery' ? 'Reset code' : 'One-time code'}
                     </label>
                     <input
                       id="otp"
@@ -629,6 +735,8 @@ export function LoginPage() {
                       onChange={(event) => setOtp(event.target.value)}
                       className="input-app"
                       placeholder="Enter code from email"
+                      autoComplete="one-time-code"
+                      inputMode="numeric"
                     />
                   </div>
                   <div className="text-right text-sm">
@@ -649,7 +757,11 @@ export function LoginPage() {
                     Use a different email
                   </button>
                   <button type="submit" disabled={loading} className="btn-primary w-full">
-                    {loading ? 'Verifying...' : 'Verify & continue'}
+                    {loading
+                      ? 'Verifying...'
+                      : otpPurpose === 'recovery'
+                        ? 'Verify code'
+                        : 'Verify & continue'}
                   </button>
                 </form>
               ) : null}
